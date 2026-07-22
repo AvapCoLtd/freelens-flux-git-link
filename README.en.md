@@ -43,7 +43,7 @@ Support for other FluxCD source kinds (`OCIRepository`, `HelmRepository`) and de
 - https://github.com/AvapCoLtd/freelens-flux-git-link (public)
 - https://gitlab.avaper.day/avap/freelens-plugins/freelens-flux-git-link (development)
 
-Development: see [CONTRIBUTING.md](CONTRIBUTING.md).
+Development: see [CONTRIBUTING.md](CONTRIBUTING.en.md).
 
 ## License
 
