@@ -2,12 +2,19 @@
 
 # freelens-flux-git-link
 
+![License](https://img.shields.io/github/license/AvapCoLtd/freelens-flux-git-link)
+![Release](https://img.shields.io/github/v/release/AvapCoLtd/freelens-flux-git-link)
+
 FluxCD の `GitRepository` を既定ブラウザで開くメニューを追加する FreeLens プラグイン。
 
 FreeLens で `GitRepository` の Custom Resource を見ても、`spec.url` はテキストとして表示されるだけである。
 そこへ遷移する手段が標準にはない。
 組み込みの Custom Resources ページ、公式 [freelens-fluxcd-extension](https://github.com/freelensapp/freelens-fluxcd-extension) のページのいずれで見ていても同様である。
 詳細は [設計ドキュメント](docs/design.md) を参照。
+
+| Before | After |
+|---|---|
+| ![プラグイン未導入の標準ドロワー](docs/images/before.png) | ![追加されたアイコンにホバーすると「Open Git URL」ツールチップが表示される](docs/images/after.png) |
 
 `freelens-flux-git-link` は `GitRepository` に「Open Git URL」メニュー項目を追加する。
 `spec.url` を https(または http)の URL に変換して既定ブラウザで開く。

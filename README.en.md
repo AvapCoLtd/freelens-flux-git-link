@@ -1,11 +1,18 @@
 # freelens-flux-git-link
 
+![License](https://img.shields.io/github/license/AvapCoLtd/freelens-flux-git-link)
+![Release](https://img.shields.io/github/v/release/AvapCoLtd/freelens-flux-git-link)
+
 A FreeLens plugin that adds a menu item to open a FluxCD `GitRepository` in the default browser.
 
 [日本語](README.md)
 
 Viewing a `GitRepository` Custom Resource in FreeLens only shows `spec.url` as plain text; there is no built-in way to navigate to it, whether you're looking at the built-in Custom Resources pages or the official [freelens-fluxcd-extension](https://github.com/freelensapp/freelens-fluxcd-extension) pages.
 See [docs/design.md](docs/design.md) for the full design rationale.
+
+| Before | After |
+|---|---|
+| ![Standard drawer without the plugin](docs/images/before.png) | ![Hovering the added icon shows an "Open Git URL" tooltip](docs/images/after.png) |
 
 `freelens-flux-git-link` adds an "Open Git URL" menu item to `GitRepository`, converting `spec.url` into an https (or http) URL and opening it in the default browser.
 It handles `ssh://` URLs and scp-like syntax (`git@host:path`) too, and strips any credentials (userinfo) embedded in the URL before opening it.
