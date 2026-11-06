@@ -1,4 +1,4 @@
-import { Common, Renderer } from "@freelensapp/extensions";
+import { type Common, Renderer } from "@freelensapp/extensions";
 import { toWebUrl } from "./git-url";
 
 // KubeObject.spec は必須プロパティ(型は unknown)のため、ここでは required のまま形だけ絞り込む。
@@ -15,10 +15,8 @@ export function OpenGitUrlMenuItem(props: Common.Types.KubeObjectMenuItemProps<G
   if (webUrl === null) return null;
 
   const handleClick = () => {
-    // window.openはElectronのBrowserWindow内遷移になり得るため、既定ブラウザで開くCommon.Util.openExternalを使う。
-    Common.Util.openExternal(webUrl).catch((error: unknown) =>
-      console.error("[freelens-flux-git-link] openExternal failed", error),
-    );
+    // ホストの window-open ハンドラが新規ウィンドウを拒否し、http/https URL を既定ブラウザへ渡す。
+    window.open(webUrl);
   };
 
   return (
