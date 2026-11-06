@@ -21,11 +21,23 @@ It handles `ssh://` URLs and scp-like syntax (`git@host:path`) too, and strips a
 
 Requires FreeLens 2.0.0 or later (see `engines` in `package.json`). It does not load on 1.x.
 
+On FreeLens 1.x, use v0.1.0, the last release for 1.x.
+v0.1.0 targets FreeLens 1.8.0 or later within 1.x and does not load on 2.0.
+
+On the Windows build of FreeLens 2.0.0, loading and enabling the extension were confirmed in the logs (2026-11-06).
+The menu item and opening the browser have not yet been checked on screen with 2.0.0.
+
 ## Install
 
-1. Download the latest `.tgz` from GitHub Releases
-2. Drag & drop it onto the Extensions screen in FreeLens
+1. Download a `.tgz` from GitHub Releases. For FreeLens 2.x, pick a release newer than v0.1.0
+2. On the Extensions screen in FreeLens, enter the path to the downloaded `.tgz` and install it
 3. To update, repeat the same steps with the new `.tgz`
+
+FreeLens places installed extensions in its extensions directory (on Windows, `%APPDATA%\Freelens\extensions\freelens-flux-git-link`).
+Extracting the `.tgz` produces a `package/` directory.
+To place it by hand, copy the contents of `package/` directly under that directory (so that `package.json` sits at its top level).
+Alternatively, enter the path of the extracted `package/` directory on the Extensions screen.
+An extension placed by hand is registered as disabled, so restart FreeLens and enable it on the Extensions screen.
 
 ## Usage
 

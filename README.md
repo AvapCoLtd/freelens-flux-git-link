@@ -25,11 +25,23 @@ FreeLensで `GitRepository` のCustom Resourceを見ても、`spec.url` はテ�
 
 FreeLens 2.0.0以上(`package.json` の `engines` を参照)。1.xでは読み込まれない。
 
+FreeLens 1.xでは、1.x向けの最後のリリースであるv0.1.0を使う。
+v0.1.0はFreeLens 1.8.0以上の1.x向けで、2.0では読み込まれない。
+
+Windows版FreeLens 2.0.0で、読み込みと有効化までをログで確認した(2026-11-06)。
+画面上でのメニュー表示とブラウザ起動は、2.0.0ではまだ確認していない。
+
 ## インストール
 
-1. GitHub Releasesから最新の `.tgz` をダウンロードする
-2. FreeLensのExtensions画面にドラッグ&ドロップする
+1. GitHub Releasesから `.tgz` をダウンロードする。FreeLens 2.xではv0.1.0より新しいリリースを選ぶ
+2. FreeLensのExtensions画面で、ダウンロードした `.tgz` のパスを指定してインストールする
 3. 更新時も同様に新しい `.tgz` を取得して再インストールする
+
+インストールした拡張はFreeLensの拡張機能ディレクトリに置かれる(Windowsでは `%APPDATA%\Freelens\extensions\freelens-flux-git-link`)。
+`.tgz` を展開すると `package/` ディレクトリができる。
+手で置く場合は、`package/` の中身をこのディレクトリの直下に置く(`package.json` が直下に来る)。
+または、展開した `package/` のパスをExtensions画面で指定する。
+手で置いた拡張は無効の状態で登録されるため、FreeLensを再起動してからExtensions画面で有効にする。
 
 ## 使い方
 
