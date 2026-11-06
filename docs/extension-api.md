@@ -12,12 +12,13 @@ FreeLens拡張開発で参照すべき情報源へのポインタ集。
 
 | 情報源 | URL | 何がわかるか |
 |---|---|---|
-| FreeLens 公式ドキュメント | <https://freelensapp.github.io/docs/> | 拡張の全体像。`LensRendererExtension` / `LensMainExtension` クラス、`globalPages` / `clusterPages` 等の登録ポイント |
+| FreeLens 公式ドキュメント | <https://freelensapp.github.io/docs/> | 拡張の全体像。拡張クラス(v2 では `Renderer.LensExtension` / `Main.LensExtension`)、`globalPages` / `clusterPages` 等の登録ポイント |
 | freelensapp/freelens(本体リポジトリ) | <https://github.com/freelensapp/freelens> | 実装の最終的な真実。API の挙動が不明なときはここを読む |
 | freelens 本体 Wiki: Extensions | <https://github.com/freelensapp/freelens/wiki/Extensions> | 拡張の配布・インストール周りの運用情報 |
 | freelensapp/freelens-example-extension | <https://github.com/freelensapp/freelens-example-extension> | 公式サンプル。clusterPages でのカスタムページ実装例 |
 | freelensapp/freelens-fluxcd-extension | <https://github.com/freelensapp/freelens-fluxcd-extension> | 公式 FluxCD 拡張。`GitRepository` 等 FluxCD リソースのページ登録の実例 |
 | FreeLens v2 移行ガイド | <https://github.com/freelensapp/freelens/blob/v2.0.0/docs/extensions/migrating-from-v1.md> | v1 拡張を v2 へ移す際の必須変更。削除・改名された API の対応表(v1→v2 rename table)もここにある |
+| FreeLens 拡張 API リファレンス | <https://github.com/freelensapp/freelens/blob/main/docs/extensions/api.md> | v2 の公開 API の仕様。`menuItemFor` / `detailsFor` と、モデルクラス(`LensExtensionKubeObject` のサブクラス)の書き方もここにある |
 | npm: `@freelensapp/extensions` | <https://www.npmjs.com/package/@freelensapp/extensions> | 拡張が依存する公開 API パッケージ。v2 では `globalThis.FreelensExtensionApi` を読むだけの shim と、単一の型定義 `dist/extension-api.d.ts` からなる。型定義がそのまま API リファレンスになる |
 | npm: `@freelensapp/legacy-extensions` | <https://www.npmjs.com/package/@freelensapp/legacy-extensions> | 旧 Lens (OpenLens) 拡張 API との互換レイヤ |
 
@@ -36,8 +37,8 @@ FreeLensはOpenLensのfork。
 外部ドキュメントより先に、まず動いている実例として本リポジトリの `src` を読むこと。
 
 - freelens-flux-git-link(本リポジトリ、[README](../README.md)):
-  `kubeObjectMenuItems` 登録(`kind`+`apiVersions` によるマッチング)+ `window.open` によるブラウザ起動の使用例(FreeLens 2.0対応済み)。
-  [docs/design.md](design.md)にgit remote URL変換規則や型制約(`KubeObjectMenuItemProps<T extends KubeObject>`)まわりの設計判断の記録あり
+  `menuItemFor` とモデルクラスによる `kubeObjectMenuItems` 登録(`kind`+`apiVersions` によるマッチング)+ `window.open` によるブラウザ起動の使用例(FreeLens 2.0対応済み)。
+  [docs/design.md](design.md)にgit remote URL変換規則やモデルクラスの型まわりの設計判断の記録あり
 - [freelens-oci-cluster](https://github.com/AvapCoLtd/freelens-oci-cluster):
   `clusterPageMenus` 登録 + `node:child_process`(`execFile`)による外部CLI呼び出しの使用例。
   `Renderer.K8sApi` のKubeObjectStore(`nodesStore` / `serviceStore` / `persistentVolumeStore` 等)使用例。
@@ -59,6 +60,10 @@ v2では `node_modules/@freelensapp/extensions/dist/extension-api.d.ts` の1フ�
 
 - `Renderer.LensExtension.kubeObjectMenuItems: KubeObjectMenuRegistration[]`。
   `{ kind, apiVersions, components: { MenuItem }, visible? }` の配列を登録する。
+- `Renderer.K8sApi.menuItemFor(kubeObjectClass, { MenuItem })`: モデルクラスのstatic `kind` と `crd.apiVersions` から上の登録を作る。
+  `MenuItem` のpropsがモデルクラスに合わないとコンパイルエラーになる。
+- `Renderer.K8sApi.LensExtensionKubeObject`: モデルクラス `GitRepository` の基底クラス。
+  型引数で `spec` の型を指定する。
 - 個々の `MenuItem` コンポーネントが受け取るpropsの型は `Common.Types.KubeObjectMenuItemProps<T extends KubeObject>`(`{ object: T; toolbar?: boolean }`)。
   `Common.Types` 名前空間からエクスポートされる。
   似た名前の `Renderer.Component.KubeObjectMenuProps` はhost側の `<KubeObjectMenu>` 本体(`id` / `editable` / `removable` / `onMenuReady` を持つ、より大きい型)である。
@@ -76,7 +81,8 @@ v2では `node_modules/@freelensapp/extensions/dist/extension-api.d.ts` の1フ�
   単一の登録が両方に反映される。
 - 表示先は2箇所: オブジェクト詳細ドロワーの上部ツールバー(アイコンのみ)と、一覧ページの行「⋮」メニュー(アイコン+テキスト)。
   ツールバーモードでアイコンのみになるのはhost側CSSの `.MenuActions.toolbar .title{display:none}` によるもの(`renderer.css` で確認)。コンポーネント側で `toolbar` propを見て `<span className="title">` の出し分けをする必要はない。
-- `KubeObject.spec` は必須プロパティ(型は `unknown`)。`GitRepository` 用の型を `interface X extends KubeObject { spec?: {...} }` のように `spec` ごとoptionalにすると、`KubeObjectMenuItemProps<T extends KubeObject>` の型制約を満たせずtscがエラーにする(実機で確認: 「Property 'spec' is optional in type 'X' but required in type 'KubeObject'」)。`spec` はrequiredのまま形だけ絞り込むこと。
+- `menuItemFor(GitRepository, { MenuItem })` に `KubeObjectMenuItemProps<Pod>` を受けるコンポーネントを渡すと、tscがエラーにする(手元のtscで確認)。
+  モデルクラスの `declare kind` / `declare apiVersion` はビルド出力に残らない(`out/renderer/index.js` で確認)。
 
 ## 要点(ポインタの読み方)
 

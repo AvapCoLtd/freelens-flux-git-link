@@ -57,11 +57,11 @@ FreeLensで `GitRepository` のCustom Resourceを見ても、`spec.url` はテ�
 
 | # | 項目 | 決定 | 理由 |
 |---|------|------|------|
-| 1 | 登録方式 | `kubeObjectMenuItems`(`kind: "GitRepository"`、`apiVersions` に v1/v1beta2/v1beta1 の3つ) | Extension 公式 API。`kind`+`apiVersions` の組でグローバルに集約されるため、組み込みの Custom Resources ページ・公式 FluxCD 拡張のページのどちらで見ても、単一登録だけで両方に同じメニュー項目が現れる(型定義・実機で確認済み) |
+| 1 | 登録方式 | `kubeObjectMenuItems` に `Renderer.K8sApi.menuItemFor(GitRepository, { MenuItem })` で登録する。`kind: "GitRepository"` と `apiVersions`(v1/v1beta2/v1beta1 の3つ)はモデルクラス `GitRepository`(`src/renderer/git-repository.ts`)の static `kind` と `crd.apiVersions` から取る | Extension 公式 API。`kind`+`apiVersions` の組でグローバルに集約されるため、組み込みの Custom Resources ページ・公式 FluxCD 拡張のページのどちらで見ても、単一登録だけで両方に同じメニュー項目が現れる(型定義・実機で確認済み)。`menuItemFor` は `MenuItem` の props をモデルクラスに対して型検査する。オブジェクトリテラルで登録すると props は `KubeObjectMenuItemProps<any>` で受けられ、別 kind 用のコンポーネントでもコンパイルが通る |
 | 2 | URL 変換 | 独自実装の `toWebUrl`(`src/renderer/git-url.ts`) | git remote URL(https/http/ssh/git、scp 風構文)を網羅的に扱える公式ユーティリティが見当たらないため自前実装。副作用のない純粋関数にして単体テストで担保する |
 | 3 | ブラウザ起動 | renderer から `window.open(url)` | FreeLens 2.0 で `Common.Util.openExternal` は削除された。移行ガイドの代替は renderer の `window.open`。ホストの window-open ハンドラは新規ウィンドウを常に拒否し、URL を既定ブラウザへ渡す。`toWebUrl` は http/https しか返さないため、main + IPC で `shell.openExternal` を呼ぶ構成は不要 |
 | 4 | 資格情報の除去 | https/http は `URL.host`、ssh/git/scp 風(scp は `ssh://` に正規化してから同じ `URL` パースに合流)は `URL.hostname` を使って URL を再構築する | `https://user:token@host/...` のような形式でも、userinfo をブラウザ URL に含めない。`URL.host`/`URL.hostname`(WHATWG URL)は元々 userinfo を含まないため、いずれの形式でも手動での strip 処理は不要 |
-| 5 | GitRepository オブジェクトの型 | `KubeObject` を継承し `spec` の形だけ `{ url?: string }` に絞り込む。`spec` 自体は required のまま | `KubeObject.spec` は必須プロパティ(型は `unknown`)。`spec` ごと optional にすると `KubeObjectMenuItemProps<T extends KubeObject>` の型制約を満たせずコンパイルエラーになることを実機の tsc で確認済み(「Property 'spec' is optional ... but required ...」) |
+| 5 | GitRepository オブジェクトの型 | `Renderer.K8sApi.LensExtensionKubeObject` のサブクラス `GitRepository` を作り、型引数 `Spec` を `{ url?: string }` にする。インスタンスの `kind` / `apiVersion` は `declare` で static の値と同じリテラル型に絞る | `menuItemFor` の型検査は構造的で、`kind` / `apiVersion` がリテラル型でないモデルは同じ形の別モデルと区別されない(型定義の `LensExtensionKubeObject` と `menuItemFor` の JSDoc)。`declare` は出力に残らないため、実行時の挙動は変わらない |
 
 ---
 
@@ -70,7 +70,10 @@ FreeLensで `GitRepository` のCustom Resourceを見ても、`spec.url` はテ�
 - `kubeObjectMenuItems` の表示先は2箇所。オブジェクト詳細ドロワーの上部ツールバー(`toolbar: true` でアイコンのみ)と、一覧ページの行「⋮」メニュー(アイコン+テキスト)。
   ツールバーモードでアイコンのみになるのは、host側CSS(`renderer.css`)の `.MenuActions.toolbar .title{display:none}` によるものである。
   コンポーネント側で `toolbar` を見て出し分ける必要はない(`<span className="title">` は常にレンダーしてよい)。
-- 型定義上の正確なエクスポート場所は `Common.Types.KubeObjectMenuItemProps` / `Common.Types.KubeObjectMenuRegistration`(`@freelensapp/core` の `extensions/common-api/types.d.ts` 経由)。
+- 型定義上の正確なエクスポート場所は `Common.Types.KubeObjectMenuItemProps` / `Common.Types.KubeObjectMenuRegistration`(`@freelensapp/extensions` の `dist/extension-api.d.ts`)。
   似た名前の `Renderer.Component.KubeObjectMenuProps` は個々の `MenuItem` コンポーネントのprops型ではない。
   host側が使う `<KubeObjectMenu>` 本体(`id` / `editable` / `removable` / `onMenuReady` を持つ、より大きい型)なので、混同しないこと。
-- `kubeObjectMenuItemRegistratorInjectable`(`@freelensapp/core`)の型定義から、登録は `{kind, apiVersions, Component, enabled, orderNumber}` の形で拡張ローダー配下に集約されることが読み取れる。ページ種別(組み込みCustom Resources / 公式FluxCD拡張)ごとに別registrationが必要な構造にはなっていない。
+- `KubeObjectMenuRegistration` は `{ kind, apiVersions, components: { MenuItem }, visible? }` の形で、ページ種別(組み込みCustom Resources / 公式FluxCD拡張)を指定する項目を持たない。
+  JSDocによると、hostは登録された `kind` と `apiVersions` のオブジェクトにだけ項目を描画する。
+- `menuItemFor` は、クラスにstatic `kind` が無いか `apiVersions` を決められないときに例外を投げる。
+  `kubeObjectMenuItems` のフィールド初期化子で呼んでいるため、その場合は拡張ごとロードに失敗する。
