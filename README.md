@@ -23,7 +23,7 @@ FreeLens で `GitRepository` の Custom Resource を見ても、`spec.url` は�
 
 ## 対応バージョン
 
-FreeLens 1.8.0 以上(package.json の `engines` を参照)。
+FreeLens 2.0.0以上(`package.json` の `engines` を参照)。1.xでは読み込まれない。
 
 ## インストール
 

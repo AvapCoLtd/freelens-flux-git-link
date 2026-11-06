@@ -48,7 +48,7 @@ FreeLens で `GitRepository` の Custom Resource を見ても、`spec.url` は�
 
 | 操作 | Input | Output | 備考 |
 |------|-------|--------|------|
-| メニュー項目クリック | なし | `spec.url` を変換した URL を既定ブラウザで開く | `Common.Util.openExternal` 経由 |
+| メニュー項目クリック | なし | `spec.url` を変換した URL を既定ブラウザで開く | `window.open` 経由(ホストが既定ブラウザへ渡す) |
 | URL 変換不能時 | `spec.url` が未対応スキーム/空/不正 | メニュー項目自体を非表示(`null` を返す) | 誤って壊れた URL を開くボタンを出さない |
 
 ---
@@ -59,7 +59,7 @@ FreeLens で `GitRepository` の Custom Resource を見ても、`spec.url` は�
 |---|------|------|------|
 | 1 | 登録方式 | `kubeObjectMenuItems`(`kind: "GitRepository"`、`apiVersions` に v1/v1beta2/v1beta1 の3つ) | Extension 公式 API。`kind`+`apiVersions` の組でグローバルに集約されるため、組み込みの Custom Resources ページ・公式 FluxCD 拡張のページのどちらで見ても、単一登録だけで両方に同じメニュー項目が現れる(型定義・実機で確認済み) |
 | 2 | URL 変換 | 独自実装の `toWebUrl`(`src/renderer/git-url.ts`) | git remote URL(https/http/ssh/git、scp 風構文)を網羅的に扱える公式ユーティリティが見当たらないため自前実装。副作用のない純粋関数にして単体テストで担保する |
-| 3 | ブラウザ起動 | `Common.Util.openExternal` | `window.open` は Electron の `BrowserWindow` 内遷移になり得るため、既定ブラウザで確実に開く公式 API を使う(`freelens-oci-cluster` の `ConsoleButton` と同じ理由・同じパターン) |
+| 3 | ブラウザ起動 | renderer から `window.open(url)` | FreeLens 2.0 で `Common.Util.openExternal` は削除された。移行ガイドの代替は renderer の `window.open`。ホストの window-open ハンドラは新規ウィンドウを常に拒否し、URL を既定ブラウザへ渡す。`toWebUrl` は http/https しか返さないため、main + IPC で `shell.openExternal` を呼ぶ構成は不要 |
 | 4 | 資格情報の除去 | https/http は `URL.host`、ssh/git/scp 風(scp は `ssh://` に正規化してから同じ `URL` パースに合流)は `URL.hostname` を使って URL を再構築する | `https://user:token@host/...` のような形式でも、userinfo をブラウザ URL に含めない。`URL.host`/`URL.hostname`(WHATWG URL)は元々 userinfo を含まないため、いずれの形式でも手動での strip 処理は不要 |
 | 5 | GitRepository オブジェクトの型 | `KubeObject` を継承し `spec` の形だけ `{ url?: string }` に絞り込む。`spec` 自体は required のまま | `KubeObject.spec` は必須プロパティ(型は `unknown`)。`spec` ごと optional にすると `KubeObjectMenuItemProps<T extends KubeObject>` の型制約を満たせずコンパイルエラーになることを実機の tsc で確認済み(「Property 'spec' is optional ... but required ...」) |
 

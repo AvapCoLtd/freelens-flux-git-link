@@ -1,5 +1,5 @@
 ---
-last_verified: 2026-07-17
+last_verified: 2026-11-06
 ---
 
 # FreeLens 拡張 API の情報源
@@ -17,7 +17,8 @@ FreeLens 拡張開発で参照すべき情報源へのポインタ集。
 | freelens 本体 Wiki: Extensions | <https://github.com/freelensapp/freelens/wiki/Extensions> | 拡張の配布・インストール周りの運用情報 |
 | freelensapp/freelens-example-extension | <https://github.com/freelensapp/freelens-example-extension> | 公式サンプル。clusterPages でのカスタムページ実装例 |
 | freelensapp/freelens-fluxcd-extension | <https://github.com/freelensapp/freelens-fluxcd-extension> | 公式 FluxCD 拡張。`GitRepository` 等 FluxCD リソースのページ登録の実例 |
-| npm: `@freelensapp/extensions` | <https://www.npmjs.com/package/@freelensapp/extensions> | 拡張が依存する公開 API パッケージ(`@freelensapp/core` の再エクスポート)。型定義がそのまま API リファレンスになる |
+| FreeLens v2 移行ガイド | <https://github.com/freelensapp/freelens/blob/v2.0.0/docs/extensions/migrating-from-v1.md> | v1 拡張を v2 へ移す際の必須変更。削除・改名された API の対応表(v1→v2 rename table)もここにある |
+| npm: `@freelensapp/extensions` | <https://www.npmjs.com/package/@freelensapp/extensions> | 拡張が依存する公開 API パッケージ。v2 では `globalThis.FreelensExtensionApi` を読むだけの shim と、単一の型定義 `dist/extension-api.d.ts` からなる。型定義がそのまま API リファレンスになる |
 | npm: `@freelensapp/legacy-extensions` | <https://www.npmjs.com/package/@freelensapp/legacy-extensions> | 旧 Lens (OpenLens) 拡張 API との互換レイヤ |
 
 ## 補助情報(旧 Lens / upstream)
@@ -35,35 +36,38 @@ FreeLens は OpenLens の fork。
 外部ドキュメントより先に、まず動いている実例として本リポジトリの `src` を読むこと。
 
 - freelens-flux-git-link(本リポジトリ、[README](../README.md)):
-  `kubeObjectMenuItems` 登録(`kind`+`apiVersions` によるマッチング)+ `Common.Util.openExternal` によるブラウザ起動の使用例。
+  `kubeObjectMenuItems` 登録(`kind`+`apiVersions` によるマッチング)+ `window.open` によるブラウザ起動の使用例(FreeLens 2.0対応済み)。
   [docs/design.md](design.md) に git remote URL 変換規則や型制約(`KubeObjectMenuItemProps<T extends KubeObject>`)まわりの設計判断の記録あり
 - [freelens-oci-cluster](https://github.com/AvapCoLtd/freelens-oci-cluster):
   `clusterPageMenus` 登録 + `node:child_process`(`execFile`)による外部 CLI 呼び出しの使用例。
   `Renderer.K8sApi` の KubeObjectStore(`nodesStore` / `serviceStore` / `persistentVolumeStore` 等)使用例。
-  `Common.Util.openExternal` を使うボタン実装(`console-button.tsx`)の先行実例でもある
+  `Common.Util.openExternal` を使うボタン実装(`console-button.tsx`)の先行実例でもある。
+  ただしFreeLens 1.x向けの実装で、`openExternal` とrendererからのNode利用はv2では使えない
 - [freelens-cluster-sidebar](https://github.com/AvapCoLtd/freelens-cluster-sidebar):
   `topBarItems` 登録 + `ReactDOM.createPortal` による常駐 UI、`Renderer.Catalog` の使用例
 - [freelens-locale-ja](https://github.com/AvapCoLtd/freelens-locale-ja):
   公式登録 API を使わない実行時パッチ方式の例。
   `src/renderer/collector.ts` は renderer コードから `node:fs` を直接 import して使う実例
-- ビルド枠組み(electron-vite の main/preload 分離、host 提供ランタイムの global externalize、CommonJS 必須)は `electron.vite.config.js` のコメントに理由付きで記載
+- ビルド枠組み(Viteをrenderer用・main用の2回実行し、どちらもESMで出力する。host提供ライブラリは `globalThis.FreelensExtensionApi` へ置き換える)は `vite.config.mjs` と `build/vite-plugin-host-modules.mjs` に記載
 
 ## 型定義 = API リファレンス
 
-`@freelensapp/extensions` の実体は `@freelensapp/core` の再エクスポート。
 公開 API の正確な形は型定義を直接読むのが確実。
-ビルド後の `node_modules/@freelensapp/core` 配下にある(`lens-renderer-extension.d.ts`、`renderer/routes/page-registration.d.ts` 等)。
+v2では `node_modules/@freelensapp/extensions/dist/extension-api.d.ts` の1ファイルに全名前空間がまとまっている。
 
 ## APIs used(このプラグインが使う API)
 
-- `Renderer.LensExtension.kubeObjectMenuItems: KubeObjectMenuRegistration[]`
-  (`lens-renderer-extension.d.ts`)。`{ kind, apiVersions, components: { MenuItem }, visible? }` の配列を登録する。
+- `Renderer.LensExtension.kubeObjectMenuItems: KubeObjectMenuRegistration[]`。
+  `{ kind, apiVersions, components: { MenuItem }, visible? }` の配列を登録する。
 - 個々の `MenuItem` コンポーネントが受け取る props の型は `Common.Types.KubeObjectMenuItemProps<T extends KubeObject>`(`{ object: T; toolbar?: boolean }`)。
-  `@freelensapp/core` の `extensions/common-api/types.d.ts` 経由で `Common.Types` 名前空間からエクスポートされる。
+  `Common.Types` 名前空間からエクスポートされる。
   似た名前の `Renderer.Component.KubeObjectMenuProps` は host 側の `<KubeObjectMenu>` 本体(`id` / `editable` / `removable` / `onMenuReady` を持つ、より大きい型)である。
   個々の `MenuItem` の props とは別物なので注意。
-- `Common.Util.openExternal(url: string): Promise<void>` — 既定ブラウザで URL を開く。`window.open` は Electron の `BrowserWindow` 内遷移になり得るため使わない。
-- `Renderer.Component.MenuItem` / `Renderer.Component.Icon` — メニュー項目本体とアイコン描画。
+- `window.open(url)`(renderer): 既定ブラウザでURLを開く。
+  ホストのwindow-openハンドラが新規ウィンドウを拒否し、URLを既定ブラウザへ渡す。
+  FreeLens 2.0.0の `app.asar` 内 `static/build/main.js` の `setWindowOpenHandler` で確認した。
+  v1の `Common.Util.openExternal` はv2で削除された。
+- `Renderer.Component.MenuItem` / `Renderer.Component.Icon`: メニュー項目本体とアイコン描画。
 
 ### 検証済みの挙動(実機・型定義で確認)
 
@@ -78,9 +82,10 @@ FreeLens は OpenLens の fork。
 
 - 拡張は renderer(UI・React)と main(Electron main プロセス)の 2 エントリポイント構成。
   独立ページ追加は renderer 側の `globalPages` / `clusterPages`(`PageRegistration[]`)に登録する。
-- このリポジトリの構成では renderer エントリは preload script としてビルドされるため、renderer コードから Node.js ビルトインモジュールへ直接アクセスできる(`freelens-oci-cluster` の `oci/run.ts` で `node:child_process` 実証済み)。
-  main + IPC(`broadcast`/`invoke`/`listen`/`handle`)経由の構成も選べる。
-- sandbox 制限の明示的な公式記述は未確認だが、renderer からの `child_process` 実行は実機検証で動作確認済み(Windows ネイティブ FreeLens)
+- FreeLens 2.0のrendererにはNode / Electronの保証がない(`require()` も含む)。
+  rendererエントリはESMとしてブラウザ向けにビルドする。
+  Nodeが要る処理はmainに置き、IPC(`broadcast`/`invoke`/`listen`/`handle`)で呼ぶ。
+  1.xではrendererから `node:child_process` 等を直接使えたが、その前提はv2では成り立たない。
 - `clusterPageMenus` は上流 Lens の公式ガイド例より**公式 FluxCD 拡張の実装を正とする**(<https://github.com/freelensapp/freelens-fluxcd-extension>)。
   実機で確認した差異が2件ある。
   全エントリ(親・子とも)に一意な `id` が必須である。

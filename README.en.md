@@ -19,7 +19,7 @@ It handles `ssh://` URLs and scp-like syntax (`git@host:path`) too, and strips a
 
 ## Compatibility
 
-Requires FreeLens 1.8.0 or later (see `engines` in package.json).
+Requires FreeLens 2.0.0 or later (see `engines` in `package.json`). It does not load on 1.x.
 
 ## Install
 
