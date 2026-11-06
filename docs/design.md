@@ -1,20 +1,20 @@
 # freelens-flux-git-link 設計ドキュメント
 
-本プラグインの設計判断の記録。使い方・デプロイ手順は [README](../README.md) を参照。
+本プラグインの設計判断の記録。使い方・デプロイ手順は[README](../README.md)を参照。
 
 ## 概要
 
-FluxCD の `GitRepository` リソースに、`spec.url` を既定ブラウザで開くメニュー項目を追加する。
+FluxCDの `GitRepository` リソースに、`spec.url` を既定ブラウザで開くメニュー項目を追加する。
 
 ## 目的
 
-1. FluxCD 管理下の `GitRepository` を見ているとき、そのソースの Git リポジトリへワンクリックで遷移できるようにする
+1. FluxCD管理下の `GitRepository` を見ているとき、そのソースのGitリポジトリへワンクリックで遷移できるようにする
 
 ## 背景・解決したい課題
 
-FreeLens で `GitRepository` の Custom Resource を見ても、`spec.url` はテキストとして表示されるだけである。
+FreeLensで `GitRepository` のCustom Resourceを見ても、`spec.url` はテキストとして表示されるだけである。
 そこへ遷移する手段が標準にはない。
-組み込みの Custom Resources ページ、公式 [freelens-fluxcd-extension](https://github.com/freelensapp/freelens-fluxcd-extension) のページのいずれも同様である。
+組み込みのCustom Resourcesページ、公式[freelens-fluxcd-extension](https://github.com/freelensapp/freelens-fluxcd-extension)のページのいずれも同様である。
 `spec.url` を手動でコピーしてブラウザに貼り付ける操作を無くす。
 
 ---
@@ -24,13 +24,13 @@ FreeLens で `GitRepository` の Custom Resource を見ても、`spec.url` は�
 ### やること
 
 - `GitRepository` (`source.toolkit.fluxcd.io/v1` / `v1beta2` / `v1beta1`) への `kubeObjectMenuItems` 登録
-- `spec.url` を https(または http) URL に変換し、既定ブラウザで開く
-- git remote URL 形式(https/http/ssh/git スキーム、scp 風構文)の変換、資格情報(userinfo)の除去
+- `spec.url` をhttps(またはhttp) URLに変換し、既定ブラウザで開く
+- git remote URL形式(https/http/ssh/gitスキーム、scp風構文)の変換、資格情報(userinfo)の除去
 
 ### やらないこと
 
-- `OCIRepository` / `HelmRepository` 等、`GitRepository` 以外の FluxCD ソース種別への対応(将来の拡張候補)
-- `spec.ref`(branch/tag/commit)を反映したディープリンク。GitHub/GitLab 等フォージごとに URL 規則が異なるため、まずは対応レポジトリのトップページを開くところから始める(将来の拡張候補)
+- `OCIRepository` / `HelmRepository` 等、`GitRepository` 以外のFluxCDソース種別への対応(将来の拡張候補)
+- `spec.ref`(branch/tag/commit)を反映したディープリンク。GitHub/GitLab等フォージごとにURL規則が異なるため、まずは対応レポジトリのトップページを開くところから始める(将来の拡張候補)
 - `GitRepository` の新規作成・編集・削除
 
 ---
@@ -39,9 +39,9 @@ FreeLens で `GitRepository` の Custom Resource を見ても、`spec.url` は�
 
 ### ユーザーフロー
 
-1. FreeLens でクラスタに接続し、`GitRepository` のオブジェクト詳細ドロワー、または一覧ページを開く
+1. FreeLensでクラスタに接続し、`GitRepository` のオブジェクト詳細ドロワー、または一覧ページを開く
 2. 詳細ドロワーでは上部ツールバーにアイコン、一覧ページの行「⋮」メニューではアイコン+テキストの行として、本メニュー項目が表示される
-3. クリックすると `spec.url` を変換した URL が既定ブラウザで開く
+3. クリックすると `spec.url` を変換したURLが既定ブラウザで開く
 4. `spec.url` が変換不能(未対応スキーム・空・不正な値)な場合、メニュー項目自体が表示されない
 
 ### Input/Output
@@ -68,9 +68,9 @@ FreeLens で `GitRepository` の Custom Resource を見ても、`spec.url` は�
 ## 技術メモ
 
 - `kubeObjectMenuItems` の表示先は2箇所。オブジェクト詳細ドロワーの上部ツールバー(`toolbar: true` でアイコンのみ)と、一覧ページの行「⋮」メニュー(アイコン+テキスト)。
-  ツールバーモードでアイコンのみになるのは、host 側 CSS(`renderer.css`)の `.MenuActions.toolbar .title{display:none}` によるものである。
+  ツールバーモードでアイコンのみになるのは、host側CSS(`renderer.css`)の `.MenuActions.toolbar .title{display:none}` によるものである。
   コンポーネント側で `toolbar` を見て出し分ける必要はない(`<span className="title">` は常にレンダーしてよい)。
 - 型定義上の正確なエクスポート場所は `Common.Types.KubeObjectMenuItemProps` / `Common.Types.KubeObjectMenuRegistration`(`@freelensapp/core` の `extensions/common-api/types.d.ts` 経由)。
-  似た名前の `Renderer.Component.KubeObjectMenuProps` は個々の `MenuItem` コンポーネントの props 型ではない。
-  host 側が使う `<KubeObjectMenu>` 本体(`id` / `editable` / `removable` / `onMenuReady` を持つ、より大きい型)なので、混同しないこと。
-- `kubeObjectMenuItemRegistratorInjectable`(`@freelensapp/core`)の型定義から、登録は `{kind, apiVersions, Component, enabled, orderNumber}` の形で拡張ローダー配下に集約されることが読み取れる。ページ種別(組み込み Custom Resources / 公式 FluxCD 拡張)ごとに別registrationが必要な構造にはなっていない。
+  似た名前の `Renderer.Component.KubeObjectMenuProps` は個々の `MenuItem` コンポーネントのprops型ではない。
+  host側が使う `<KubeObjectMenu>` 本体(`id` / `editable` / `removable` / `onMenuReady` を持つ、より大きい型)なので、混同しないこと。
+- `kubeObjectMenuItemRegistratorInjectable`(`@freelensapp/core`)の型定義から、登録は `{kind, apiVersions, Component, enabled, orderNumber}` の形で拡張ローダー配下に集約されることが読み取れる。ページ種別(組み込みCustom Resources / 公式FluxCD拡張)ごとに別registrationが必要な構造にはなっていない。
