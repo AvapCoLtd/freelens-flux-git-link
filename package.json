@@ -1,6 +1,6 @@
 {
   "name": "freelens-flux-git-link",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "FreeLens plugin that adds a menu item to open a FluxCD GitRepository in the default browser",
   "main": "out/main/index.js",
   "type": "module",
