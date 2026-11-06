@@ -1,24 +1,15 @@
-import { Common, Renderer } from "@freelensapp/extensions";
+import { type Common, Renderer } from "@freelensapp/extensions";
+import type { GitRepository } from "./git-repository";
 import { toWebUrl } from "./git-url";
 
-// KubeObject.spec は必須プロパティ(型は unknown)のため、ここでは required のまま形だけ絞り込む。
-// spec ごと optional にすると KubeObjectMenuItemProps<T extends KubeObject> の制約を満たせなくなる。
-export interface GitRepositoryObject extends Renderer.K8sApi.KubeObject {
-  spec: {
-    url?: string;
-  };
-}
-
-export function OpenGitUrlMenuItem(props: Common.Types.KubeObjectMenuItemProps<GitRepositoryObject>) {
+export function OpenGitUrlMenuItem(props: Common.Types.KubeObjectMenuItemProps<GitRepository>) {
   const { object, toolbar } = props;
   const webUrl = toWebUrl(object.spec?.url);
   if (webUrl === null) return null;
 
   const handleClick = () => {
-    // window.openはElectronのBrowserWindow内遷移になり得るため、既定ブラウザで開くCommon.Util.openExternalを使う。
-    Common.Util.openExternal(webUrl).catch((error: unknown) =>
-      console.error("[freelens-flux-git-link] openExternal failed", error),
-    );
+    // ホストの window-open ハンドラが新規ウィンドウを拒否し、http/https URL を既定ブラウザへ渡す。
+    window.open(webUrl);
   };
 
   return (
